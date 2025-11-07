@@ -94,11 +94,16 @@ class QA_Dataset(Dataset):
             answer_end_token = tokenized_paragraph.char_to_token(question["answer_end"])
 
             # A single window is obtained by slicing the portion of paragraph containing the answer
+            '''
             mid = (answer_start_token + answer_end_token) // 2
             paragraph_start = max(0, min(mid - self.max_paragraph_len // 2, len(tokenized_paragraph) - self.max_paragraph_len))
             paragraph_end = paragraph_start + self.max_paragraph_len
-
-            #改进:生成的窗口
+            '''
+            #改进:生成的窗口,让答案在窗口中的随机位置
+            answer_len = answer_end_token - answer_start_token
+            width = self.max_paragraph_len - answer_len #答案随机起始位置的范围
+            paragraph_start = np.random.randint(max(0,answer_start_token - width),answer_start_token+1)
+            paragraph_end   = paragraph_start + self.max_paragraph_len
             
             # Slice question/paragraph and add special tokens (101: CLS, 102: SEP)
             input_ids_question = [101] + tokenized_question.ids[:self.max_question_len] + [102] 
@@ -161,7 +166,7 @@ train_set = QA_Dataset("train", train_questions, train_questions_tokenized, trai
 dev_set = QA_Dataset("dev", dev_questions, dev_questions_tokenized, dev_paragraphs_tokenized)
 test_set = QA_Dataset("test", test_questions, test_questions_tokenized, test_paragraphs_tokenized)
 
-train_batch_size = 32
+train_batch_size = 64
 
 # Note: Do NOT change batch size of dev_loader / test_loader !
 # Although batch size=1, it is actually a batch consisting of several windows from the same QA pair
@@ -169,7 +174,7 @@ train_loader = DataLoader(train_set, batch_size=train_batch_size, shuffle=True, 
 dev_loader = DataLoader(dev_set, batch_size=1, shuffle=False, pin_memory=True)
 test_loader = DataLoader(test_set, batch_size=1, shuffle=False, pin_memory=True)
 
-num_epoch = 1
+num_epoch = 6
 validation = True
 logging_step = 100
 learning_rate = 1e-4
