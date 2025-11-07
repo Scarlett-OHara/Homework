@@ -27,7 +27,7 @@ same_seeds(0)
 fp16_training = False
 if fp16_training:
     from accelerate import Accelerator
-    accelerator = Accelerator(fp16=True)
+    accelerator = Accelerator(mixed_precision = "fp16")
     device = accelerator.device
 
 def read_data(file):
@@ -72,8 +72,8 @@ class QA_Dataset(Dataset):
         self.max_paragraph_len = 150
         
         ##### TODO: Change value of doc_stride #####
-        self.doc_stride = 150
-
+        #self.doc_stride = 150
+        self.doc_stride = 75
         # Input sequence length = [CLS] + question + [SEP] + paragraph + [SEP]
         self.max_seq_len = 1 + self.max_question_len + 1 + self.max_paragraph_len + 1
 
@@ -97,6 +97,8 @@ class QA_Dataset(Dataset):
             mid = (answer_start_token + answer_end_token) // 2
             paragraph_start = max(0, min(mid - self.max_paragraph_len // 2, len(tokenized_paragraph) - self.max_paragraph_len))
             paragraph_end = paragraph_start + self.max_paragraph_len
+
+            #改进:生成的窗口
             
             # Slice question/paragraph and add special tokens (101: CLS, 102: SEP)
             input_ids_question = [101] + tokenized_question.ids[:self.max_question_len] + [102] 
@@ -143,9 +145,9 @@ class QA_Dataset(Dataset):
         return input_ids, token_type_ids, attention_mask
 
 
-train_questions, train_paragraphs = read_data("./Dataset/hw7_train.json")
-dev_questions, dev_paragraphs = read_data("./Dataset/hw7_dev.json")
-test_questions, test_paragraphs = read_data("./Dataset/hw7_test.json")
+train_questions, train_paragraphs = read_data("/home/featurize/datasets/Dataset/hw7_train.json")
+dev_questions, dev_paragraphs     = read_data("/home/featurize/datasets/Dataset/hw7_dev.json")
+test_questions, test_paragraphs   = read_data("/home/featurize/datasets/Dataset/hw7_test.json")
 
 train_questions_tokenized = tokenizer([train_question["question_text"] for train_question in train_questions], add_special_tokens=False)
 dev_questions_tokenized = tokenizer([dev_question["question_text"] for dev_question in dev_questions], add_special_tokens=False)
@@ -171,7 +173,9 @@ num_epoch = 1
 validation = True
 logging_step = 100
 learning_rate = 1e-4
+step_total = 1000 * num_epoch
 optimizer = torch.optim.AdamW(model.parameters(), lr=learning_rate)
+#scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer=optimizer,T_max=1000)
 
 if fp16_training:
     model, optimizer, train_loader = accelerator.prepare(model, optimizer, train_loader) 
@@ -184,19 +188,14 @@ for epoch in range(num_epoch):
     step = 1
     train_loss = train_acc = 0
     
-    for data in tqdm(train_loader):	
-        # Load all data into GPU
+    
+    for data in tqdm(train_loader,position=0,leave=True):	
         data = [i.to(device) for i in data]
-        
-        # Model inputs: input_ids, token_type_ids, attention_mask, start_positions, end_positions (Note: only "input_ids" is mandatory)
-        # Model outputs: start_logits, end_logits, loss (return when start_positions/end_positions are provided)  
         output = model(input_ids=data[0], token_type_ids=data[1], attention_mask=data[2], start_positions=data[3], end_positions=data[4])
 
-        # Choose the most probable start position / end position
         start_index = torch.argmax(output.start_logits, dim=1)
         end_index = torch.argmax(output.end_logits, dim=1)
         
-        # Prediction is correct only if both start_index and end_index are correct
         train_acc += ((start_index == data[3]) & (end_index == data[4])).float().mean()
         train_loss += output.loss
         
@@ -210,11 +209,13 @@ for epoch in range(num_epoch):
         step += 1
 
         ##### TODO: Apply linear learning rate decay #####
-        
-        
+        #scheduler.step()
+        optimizer.param_groups[0]['lr'] -= learning_rate / step_total
+        #tqdm.write(f"learning rate:{optimizer.param_groups[0]['lr']}")
         # Print training loss and accuracy over past logging step
         if step % logging_step == 0:
-            print(f"Epoch {epoch + 1} | Step {step} | loss = {train_loss.item() / logging_step:.3f}, acc = {train_acc / logging_step:.3f}")
+            tqdm.write(f"Epoch {epoch + 1} | Step {step} | loss = {train_loss.item() / logging_step:.3f}, acc = {train_acc / logging_step:.3f}")
+            tqdm.write(f"learning rate:{optimizer.param_groups[0]['lr']}")
             train_loss = train_acc = 0
 
     if validation:
