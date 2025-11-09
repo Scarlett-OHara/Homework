@@ -1,0 +1,8 @@
+{
+    "train_batchsize" : 2000,
+    "test_batchsize"  : 200,
+    "num_epochs"      : 50,
+    "learning_rate"   : 1e-3,
+    "model_type"      : "vae"
+
+}
