@@ -1,8 +1,8 @@
 {
-    "train_batchsize" : 2000,
-    "test_batchsize"  : 200,
+    "train_batchsize" : 512,
+    "test_batchsize"  : 256,
     "num_epochs"      : 50,
     "learning_rate"   : 1e-3,
-    "model_type"      : "vae"
+    "model_type"      : "fcn"
 
 }

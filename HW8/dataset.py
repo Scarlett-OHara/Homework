@@ -19,6 +19,7 @@ class CustomTensorDataset(TensorDataset):
     
     def __getitem__(self, index):
         x = self.tensors[index]
+        
         if self.transform:
             x = self.transform(x)
 

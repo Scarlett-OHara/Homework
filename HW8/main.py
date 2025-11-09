@@ -50,16 +50,16 @@ optimizer = torch.optim.Adam(mymodel.parameters(), lr=learning_rate)
 best_loss = np.inf
 
 mymodel.train()
-qqdm_train = qqdm(range(num_epochs), desc=format_str('bold', 'Description'))
-for epoch in qqdm_train:
+#qqdm_train = qqdm(range(num_epochs), desc=format_str('bold', 'Description'))
+for epoch in range(num_epochs):
     total_loss = []
-    #qqdm_train = qqdm(train_loader, desc=format_str('bold', 'Description'))
-    step = 0
-    for data in train_loader:
+    qqdm_train = qqdm(train_loader, desc=format_str('bold', 'Description'))
+
+    for data in qqdm_train:
         img = data.float().cuda()
         if model_type == "fcn":
             img = img.view(img.shape[0],-1)
-        
+
         output = mymodel(img)
 
         if model_type in ['vae']:
@@ -71,11 +71,11 @@ for epoch in qqdm_train:
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
-        step += 1
-        qqdm_train.set_infos({'epoch': f'{epoch + 1:.0f}/{num_epochs:.0f}','loss': f'{loss:.4f}','batch':f'{step}/{len(train_loader)}'})
+
+        qqdm_train.set_infos({'epoch': f'{epoch + 1:.0f}/{num_epochs:.0f}','loss': f'{np.mean(total_loss):.4f}',})
 
     mean_loss = np.mean(total_loss)
-    
+    #qqdm_train.set_infos({'epoch': f'{epoch + 1:.0f}/{num_epochs:.0f}','loss': f'{mean_loss:.4f}',})
     if mean_loss < best_loss:
         best_loss = mean_loss
         torch.save(mymodel, './best_model_{}.pt'.format(model_type))

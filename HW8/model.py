@@ -7,29 +7,26 @@ class fcn_autoencoder(nn.Module):
     def __init__(self):
         super().__init__()
         self.encoder = nn.Sequential(
-            nn.Linear(64*3*3,128),
+            nn.Linear(64*64*3,4096),
             nn.ReLU(),
-            nn.Linear(128,64),
+            nn.Linear(4096,2048),
             nn.ReLU(),
-            nn.Linear(64,12),
-            nn.ReLU(),
-            nn.Linear(12,3),
+            nn.Linear(2048,1024),
         )
 
         self.decoder = nn.Sequential(
-            nn.Linear(3,12),
+            nn.Linear(1024,2048),
             nn.ReLU(),
-            nn.Linear(12,64),
+            nn.Linear(2048,4096),
             nn.ReLU(),
-            nn.Linear(64,128),
-            nn.ReLU(),
-            nn.Linear(128,3*64*64),
+            nn.Linear(4096,3*64*64),
             nn.Tanh(),
         )
 
     def forward(self,x):
         x = self.encoder(x)
         x = self.decoder(x)
+        return x
 
 class conv_autoencoder(nn.Module):
     def __init__(self):
