@@ -54,7 +54,10 @@ class TwoLayerNet(object):
         # and biases using the keys 'W1' and 'b1' and second layer                 #
         # weights and biases using the keys 'W2' and 'b2'.                         #
         ############################################################################
-
+        self.params['W1'] = weight_scale*np.random.randn(input_dim,hidden_dim)
+        self.params['b1'] = np.zeros(hidden_dim)
+        self.params['W2'] = weight_scale*np.random.randn(hidden_dim,num_classes)
+        self.params['b2'] = np.zeros(num_classes)
         ############################################################################
         #                             END OF YOUR CODE                             #
         ############################################################################
@@ -83,15 +86,17 @@ class TwoLayerNet(object):
         # TODO: Implement the forward pass for the two-layer net, computing the    #
         # class scores for X and storing them in the scores variable.              #
         ############################################################################
-
+        #output = X @ self.params['W1'] + self.params['b1']
+        output,cache1 = affine_relu_forward(X,self.params['W1'] , self.params['b1'])
+        #output_relu,cache_relu = affine_relu_forward(output)
+        scores,cache2 = affine_forward(output,self.params['W2'],self.params['b2'])
         ############################################################################
         #                             END OF YOUR CODE                             #
         ############################################################################
-
         # If y is None then we are in test mode so just return scores
         if y is None:
             return scores
-
+        
         loss, grads = 0, {}
         ############################################################################
         # TODO: Implement the backward pass for the two-layer net. Store the loss  #
@@ -103,11 +108,15 @@ class TwoLayerNet(object):
         # automated tests, make sure that your L2 regularization includes a factor #
         # of 0.5 to simplify the expression for the gradient.                      #
         ############################################################################
-
+        loss,dscores = softmax_loss(scores,y)
+        loss += (self.reg * np.sum(0.5*self.params['W1']**2) + 0.5*self.reg *np.sum(self.params['W2']**2))
+        doutput,grads['W2'],grads['b2'] = affine_backward(dscores,cache2)
+        _,grads['W1'],grads['b1']       = affine_relu_backward(doutput,cache1)
         ############################################################################
         #                             END OF YOUR CODE                             #
         ############################################################################
-
+        grads["W1"]+=self.reg*self.params["W1"]
+        grads["W2"]+=self.reg*self.params["W2"]
         return loss, grads
 
     def save(self, fname):
@@ -197,7 +206,10 @@ class FullyConnectedNet(object):
         # beta2, etc. Scale parameters should be initialized to ones and shift     #
         # parameters should be initialized to zeros.                               #
         ############################################################################
-
+        self.params['W1'] = weight_scale*np.random.randn(input_dim,hidden_dims[0])
+        self.params['b1'] = np.zeros(hidden_dims[0])
+        self.params['W2'] = weight_scale*np.random.randn(hidden_dims[0],hidden_dims[1])
+        self.params['b2'] = np.zeros(hidden_dims[1])
         ############################################################################
         #                             END OF YOUR CODE                             #
         ############################################################################
@@ -267,7 +279,11 @@ class FullyConnectedNet(object):
         # self.bn_params[1] to the forward pass for the second batch normalization #
         # layer, etc.                                                              #
         ############################################################################
-
+        print('error')
+        out_affine1,cache_affine1 = affine_forward(X,self.params['W1'],self.params['b1'])
+        print('error')
+        out_norm1,cache_norm1 = batchnorm_forward(out_affine1,self.bn_params[0])
+        print('error')
         ############################################################################
         #                             END OF YOUR CODE                             #
         ############################################################################
