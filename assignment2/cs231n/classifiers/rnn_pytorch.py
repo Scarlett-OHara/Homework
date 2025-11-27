@@ -53,7 +53,7 @@ class CaptioningRNN:
         self._end = word_to_idx.get("<END>", None)
 
         # Initialize word vectors
-        self.params["W_embed"] = torch.randn(vocab_size, wordvec_dim)
+        self.params["W_embed"] = torch.randn(vocab_size, wordvec_dim) #每个单词用128长的向量表示 3*128
         self.params["W_embed"] /= 100
 
         # Initialize CNN -> hidden state projection parameters
@@ -98,8 +98,8 @@ class CaptioningRNN:
         # by one relative to each other because the RNN should produce word (t+1)
         # after receiving word t. The first element of captions_in will be the START
         # token, and the first element of captions_out will be the first word.
-        captions_in = captions[:, :-1]
-        captions_out = captions[:, 1:]
+        captions_in = captions[:, :-1] #<start> + squence
+        captions_out = captions[:, 1:] #squence + <end>
 
         # You'll need this
         mask = captions_out != self._null
@@ -138,7 +138,14 @@ class CaptioningRNN:
         #                                                                          #
         # You also don't have to implement the backward pass.                      #
         ############################################################################
-        # 
+        h0 = affine_forward(features, W_proj, b_proj)
+
+        x = word_embedding_forward(captions_in,W_embed)
+        h = rnn_forward(x,h0,Wx,Wh,b)
+        
+        scores = temporal_affine_forward(h,W_vocab, b_vocab)
+
+        loss = temporal_softmax_loss(scores,captions_out,mask)
         ############################################################################
         #                             END OF YOUR CODE                             #
         ############################################################################
@@ -202,7 +209,21 @@ class CaptioningRNN:
         # NOTE: we are still working over minibatches in this function. Also if   #
         # you are using an LSTM, initialize the first cell state to zeros.        #
         ###########################################################################
-        # 
+        h0 = affine_forward(features,W_proj,b_proj)
+        start_idx_tensor = torch.full((N,), self._start, dtype=torch.long)
+        #x_now = torch.zeros((features.shape[0],W_embed.shape[1]),dtype=W_embed.dtype)
+        x_now = W_embed[start_idx_tensor]
+        h_prev = h0
+        samples = []
+        for i in range(max_length):
+          h_next = rnn_step_forward(x_now,h_prev,Wx,Wh,b)
+          scores = temporal_affine_forward(h_next.reshape(N,1,W_vocab.shape[0]),W_vocab,b_vocab).squeeze(dim=1)
+          idx = torch.argmax(scores,dim=1)
+          x_now = W_embed[idx]
+          h_prev = h_next
+          samples.append(idx)
+
+        captions = torch.stack(samples, dim=1)
         ############################################################################
         #                             END OF YOUR CODE                             #
         ############################################################################

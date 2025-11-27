@@ -43,7 +43,8 @@ def rnn_step_forward(x, prev_h, Wx, Wh, b):
     ##############################################################################
     # TODO: Implement a single forward step for the vanilla RNN.                 #
     ##############################################################################
-    # 
+    next_h=affine_forward(x,Wx,0) + affine_forward(prev_h,Wh,0)+b
+    next_h = torch.tanh(next_h)
     ##############################################################################
     #                               END OF YOUR CODE                             #
     ##############################################################################
@@ -73,7 +74,14 @@ def rnn_forward(x, h0, Wx, Wh, b):
     # input data. You should use the rnn_step_forward function that you defined  #
     # above. You can use a for loop to help compute the forward pass.            #
     ##############################################################################
-    # 
+    T = x.shape[1]
+    h = torch.zeros(x.shape[0],x.shape[1],b.shape[0], dtype=x.dtype, device=x.device)
+    prev_h = h0
+    for t in range(T):
+        input = x[:,t,:]
+        next_h = rnn_step_forward(input,prev_h,Wx,Wh,b)
+        h[:,t,:] = next_h
+        prev_h = next_h
     ##############################################################################
     #                               END OF YOUR CODE                             #
     ##############################################################################
@@ -101,7 +109,7 @@ def word_embedding_forward(x, W):
     #                                                                            #
     # HINT: This can be done in one line using Pytorch's array indexing.         #
     ##############################################################################
-    # 
+    out = W[x]
     ##############################################################################
     #                               END OF YOUR CODE                             #
     ##############################################################################
